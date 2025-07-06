@@ -1,103 +1,266 @@
+"use client";
+import { AuthModal } from "@/components/ui/auth-modal";
+import { CreateRecipeModal } from "@/components/ui/create-recipe-modal";
+import { Navbar } from "@/components/ui/navbar";
+import { RecipeCard } from "@/components/ui/recipe-card";
+import { UserProfileModal } from "@/components/ui/user-profile-modal";
+import { ViewingRecipeModal } from "@/components/ui/viewing-recipe-modal";
+import { ACCESS_TOKEN, REFRESH_TOKEN } from "@/constants";
+import axios from "axios";
+import { Search } from "lucide-react";
 import Image from "next/image";
-
+import { useState, useEffect } from "react";
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [user, setUser] = useState<UserType | null>(null);
+  const [recipes, setRecipes] = useState<RecipeType[]>([]);
+  const [categories, setCategories] = useState<CategoryType[]>([]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | number>(
+    "all"
+  );
+
+  //Modal states
+
+  const [showAuth, setShowAuth] = useState(false);
+  const [showAddRecipe, setShowAddRecipe] = useState(false);
+  const [viewingRecipe, setViewingRecipe] = useState<RecipeType | null>(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      try {
+        const res = await axios.get<RecipeType[]>(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/recipes/`,
+          {
+            params: {
+              search: searchTerm,
+              category:
+                selectedCategory !== "all" ? selectedCategory : undefined,
+            },
+          }
+        );
+        setRecipes(res.data);
+      } catch (error) {
+        console.error("Error fetching recipes:", error);
+      }
+    };
+
+    fetchRecipes();
+  }, [searchTerm, selectedCategory]);
+  useEffect(() => {
+    fetchCategories();
+    fetchUser();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get<CategoryType[]>(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/categories/`
+      );
+      setCategories(res.data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+
+  const fetchUser = async () => {
+    try {
+   
+         const res = await axios.get<UserType>(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/profile/`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN)}`,
+          },
+        }
+      );
+      setUser(res.data);
+    
+    } catch (error) {
+      console.error("Error fetching user:", error);
+    }
+  };
+
+  const onSaveProfile = async(formData: Partial<UserType>) => {
+      try {
+      const res = await axios.post<UserType>(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/profile/`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN)}`,
+          },
+        }
+      );
+      if (res.data) {
+        setShowUserProfile(false);
+        window.location.reload();
+        //Show a success toast
+      }
+    } catch (error) {
+      console.error("Error updating user profile : ", error);
+    }
+  };
+ 
+  const handleLogout = () => {
+      localStorage.removeItem(ACCESS_TOKEN)
+      localStorage.removeItem(REFRESH_TOKEN)
+      setUser(null)
+      setShowAddRecipe(false)
+      setViewingRecipe(null)
+      setShowUserProfile(false)
+  };
+
+  const handleToggleFavorite  =async (recipeId:number) => {
+     if(!recipeId) return
+     if(!user){
+      alert("Login to be able to favorite recipe")
+      return
+     }
+     try {
+       const res= await axios.post( `${process.env.NEXT_PUBLIC_BACKEND_URL}/recipes/${recipeId}/favorite/`,{},{
+        headers:{
+          'Content-Type':'application/json',
+          Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN)}`
+        }
+       })
+       if(res.data.favorited){
+        alert("You have successfully favorited the recipe")
+       }else{
+        alert("You have unfavorited the recipe")
+       }
+     } catch (error) {
+       console.error("Error while favorting recipe",error)
+     }
+  };
+  const handleDeleteRecipe  = async(slug:string) => {
+    try{
+       const res = await axios.delete(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/recipes/${slug}/favorite/`
+      );
+      if (res.status === 200) {
+        window.location.reload();
+        setViewingRecipe(null);
+      }
+    } catch (error) {
+      console.error("Error deleting recipe:", error);
+    }
+
+
+  };
+  console.log("Available recipes : ",recipes);
+
+  return (
+    <div className=" min-h-screen bg-gray-50">
+      <Navbar
+        handleLogout={handleLogout}
+        setShowAddRecipe={setShowAddRecipe}
+        setShowAuth={setShowAuth}
+        user={user}
+        setShowUserProfile={setShowUserProfile}
+      />
+      <main className=" max-w-6xl  mx-auto px-4 py-8">
+         <div className="mb-8">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search
+                className="absolute left-3 top-3 text-gray-400"
+                size={16}
+              />
+              <input
+                type="text"
+                placeholder="Search recipes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="all">
+                 All
+              </option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}{" "}
+                  {category.recipes_count > 0 && `(${category.recipes_count})`}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div >
+          {recipes.length===0 ? (
+              <>
+                <h2 className=" text-2xl font-bold text-neutral-900 mb-4">
+                    No recipes were found
+                </h2>
+                <p className=" text-gray-600">
+                 No recipes matching the search criteria . Try another search or add a new recipe
+                </p>
+              </>
+          ):(  
+           <>
+            <h2 className=" text-3xl font-bold text-neutral-900 mb-4">
+                  Recipes
+            </h2>
+            <div className=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
+                {recipes.map(recipe=>(
+                   <RecipeCard
+                    key={recipe.id}  
+                   user={user}
+                     recipe={recipe}
+                     setViewingRecipe={setViewingRecipe}
+                     handleDeleteRecipe={handleDeleteRecipe}
+                     handleToggleFavorite={handleToggleFavorite}
+                   />
+                ))}
+            </div>
+           </>
+          )}
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      {/* Show Auth Modal */}
+      {showAuth && (
+        <AuthModal
+          setShowAuth={setShowAuth}
+          setShowUserProfile={setShowAddRecipe}
+        />
+      )}
+      {showUserProfile && (
+        <UserProfileModal
+          onSave={onSaveProfile}
+          setShowUserProfile={setShowUserProfile}
+          userData={user}
+        />
+      )}
+      {
+       viewingRecipe && (
+        <ViewingRecipeModal
+          comments={viewingRecipe.comments}
+          setViewingRecipe={setViewingRecipe}
+          user={user}
+          handleToggleFavorite={handleToggleFavorite}
+          viewingRecipe={viewingRecipe}
+        />
+      )
+      }
+      {
+        showAddRecipe  &&(
+          <CreateRecipeModal
+            categories={categories}
+            setShowAddRecipe={setShowAddRecipe}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        )
+      }
+     
     </div>
   );
 }
