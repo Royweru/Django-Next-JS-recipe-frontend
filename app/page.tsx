@@ -236,7 +236,7 @@ export default function Home() {
               </>
             )
           }
-          {recipes.length===0 &&!loadingRecipes ? (
+          {recipes.length===0 &&!loadingRecipes && (
               <>
                 <h2 className=" text-2xl font-bold text-neutral-900 mb-4">
                     No recipes were found
@@ -245,8 +245,11 @@ export default function Home() {
                  No recipes matching the search criteria . Try another search or add a new recipe
                 </p>
               </>
-          ):(  
-           <>
+          )}
+          
+          {
+            recipes &&!loadingRecipes && (
+                  <>
             <h2 className=" text-3xl font-bold text-neutral-900 mb-4">
                   Recipes
             </h2>
@@ -263,7 +266,10 @@ export default function Home() {
                 ))}
             </div>
            </>
-          )}
+            )
+          }
+       
+        
         </div>
       </main>
       {/* Show Auth Modal */}
