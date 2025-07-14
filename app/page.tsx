@@ -24,12 +24,14 @@ export default function Home() {
 
   const [showAuth, setShowAuth] = useState(false);
   const [showAddRecipe, setShowAddRecipe] = useState(false);
+  const [loadingRecipes, setLoadingRecipes]= useState(false);
   const [viewingRecipe, setViewingRecipe] = useState<RecipeType | null>(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
 
   useEffect(() => {
     const fetchRecipes = async () => {
       try {
+        setLoadingRecipes(true)
         const res = await axios.get<RecipeType[]>(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/recipes/`,
           {
@@ -43,6 +45,8 @@ export default function Home() {
         setRecipes(res.data);
       } catch (error) {
         console.error("Error fetching recipes:", error);
+      }finally{
+        setLoadingRecipes(false)
       }
     };
 
@@ -197,7 +201,42 @@ export default function Home() {
           </div>
         </div>
         <div >
-          {recipes.length===0 ? (
+          {
+            loadingRecipes &&(
+              <>
+                <div className=" w-full py-14 flex items-center justify-center">
+                     <div className=" space-y-4">
+                         <h4 className=" font-bold text-4xl">
+                          Loading recipes
+                         </h4>
+                        <div className="flex justify-center">
+                          <svg
+                            className="animate-spin h-10 w-10 text-orange-500 mx-auto"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            ></path>
+                          </svg>
+                        </div>
+                     </div>
+                </div>
+              </>
+            )
+          }
+          {recipes.length===0 &&!loadingRecipes ? (
               <>
                 <h2 className=" text-2xl font-bold text-neutral-900 mb-4">
                     No recipes were found
