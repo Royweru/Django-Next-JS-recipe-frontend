@@ -246,9 +246,9 @@ export default function Home() {
                 </p>
               </>
           )}
-          
+
           {
-            recipes &&!loadingRecipes && (
+            recipes.length!==0 &&!loadingRecipes && (
                   <>
             <h2 className=" text-3xl font-bold text-neutral-900 mb-4">
                   Recipes
