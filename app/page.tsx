@@ -206,8 +206,8 @@ export default function Home() {
               <>
                 <div className=" w-full py-14 flex items-center justify-center">
                      <div className=" space-y-4">
-                         <h4 className=" font-bold text-4xl">
-                          Loading recipes
+                         <h4 className="  text-4xl">
+                          Loading recipes....
                          </h4>
                         <div className="flex justify-center">
                           <svg
